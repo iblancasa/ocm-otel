@@ -2,6 +2,9 @@
 KUBE_VERSION ?= 1.28
 KIND_CONFIG ?= kind-$(KUBE_VERSION).yaml
 
+OTEL_OPERATOR_VERSION ?= 0.89.0
+CERTMANAGER_VERSION ?= 1.13.2
+
 # Tools
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 KUSTOMIZE_VERSION ?= v5.0.3
@@ -65,12 +68,28 @@ undeploy: kustomize
 	cd deploy && $(KUSTOMIZE) build deploy | kubectl delete -f - --context=kind-hub
 
 .PHONY: enable-addon
-enable-addon:
+enable-addon:  deploy
 	clusteradm addon enable --names busybox-addon --namespace open-cluster-management-agent-addon --clusters cluster1
 
 .PHONY: disable-addon
 disable-addon:
 	clusteradm addon disable --names busybox-addon --all-clusters true
 
+.PHONY: deploy-cert-manager
+deploy-cert-manager:
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v$(CERTMANAGER_VERSION)/cert-manager.yaml --context=kind-hub
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v$(CERTMANAGER_VERSION)/cert-manager.yaml --context=kind-cluster1
+	kubectl wait --timeout=5m --for=condition=available deployment cert-manager -n cert-manager --context=kind-hub
+	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-cainjector -n cert-manager --context=kind-hub
+	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-webhook -n cert-manager --context=kind-hub
+	kubectl wait --timeout=5m --for=condition=available deployment cert-manager -n cert-manager --context=kind-cluster1
+	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-cainjector -n cert-manager --context=kind-cluster1
+	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-webhook -n cert-manager --context=kind-cluster1
+
+.PHONY: deploy-otel-operator
+deploy-otel-operator: deploy-cert-manager
+	kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v$(OTEL_OPERATOR_VERSION)/opentelemetry-operator.yaml --context=kind-hub
+	kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v$(OTEL_OPERATOR_VERSION)/opentelemetry-operator.yaml --context=kind-cluster1
+
 .PHONY: all
-all: start-clusters deploy enable-addon
+all: start-clusters deploy-cert-manager deploy-otel-operator deploy enable-addon
