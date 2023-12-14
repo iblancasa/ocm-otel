@@ -1,23 +1,23 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: busybox-addon-controller
+  name: otel-addon-controller
   labels:
-    app: busybox-addon-controller
+    app: otel-addon-controller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: busybox-addon-controller
+      app: otel-addon-controller
   template:
     metadata:
       labels:
-        app: busybox-addon-controller
+        app: otel-addon-controller
     spec:
-      serviceAccountName: busybox-addon-sa
+      serviceAccountName: otel-addon-sa
       containers:
-      - name: busybox-addon-controller
+      - name: otel-addon-controller
         image: quay.io/open-cluster-management/addon-examples
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         args:
           - "/busybox"

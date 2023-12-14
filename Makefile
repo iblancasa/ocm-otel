@@ -14,6 +14,12 @@ GOOS ?= linux
 ARCH ?= $(shell go env GOARCH)
 LDFLAGS ?= -s -w
 
+# Image URL to use all building/pushing image targets;
+EXAMPLE_IMAGE ?= addon-examples
+IMAGE_REGISTRY ?= quay.io/open-cluster-management
+IMAGE_TAG ?= latest
+EXAMPLE_IMAGE_NAME ?= $(IMAGE_REGISTRY)/$(EXAMPLE_IMAGE):$(IMAGE_TAG)
+
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
@@ -48,32 +54,31 @@ clusteradm:
 addon: bin/addon
 
 bin/addon:
-	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(ARCH) go build -o bin/addon -ldflags "${LDFLAGS}" cmd/main.go
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(ARCH) go build -o bin/addon_${ARCH} -ldflags "${LDFLAGS}" ./cmd/main.go
 
 
-# Image URL to use all building/pushing image targets;
-EXAMPLE_IMAGE ?= addon-examples
-IMAGE_REGISTRY ?= quay.io/open-cluster-management
-IMAGE_TAG ?= latest
-export EXAMPLE_IMAGE_NAME ?= $(IMAGE_REGISTRY)/$(EXAMPLE_IMAGE):$(IMAGE_TAG)
+.PHONY: container
+container: GOOS = linux
+container: addon
+	docker buildx build -t ${EXAMPLE_IMAGE_NAME} . --platform  $(ARCH) --push
 
 .PHONY: deploy
-deploy: kustomize
+deploy: kustomize container
 	kubectx kind-hub
 	cd deploy && $(KUSTOMIZE) edit set image quay.io/open-cluster-management/addon-examples=$(EXAMPLE_IMAGE_NAME)
 	$(KUSTOMIZE) build deploy | kubectl apply -f - --context=kind-hub
 
 .PHONY: undeploy
 undeploy: kustomize
-	cd deploy && $(KUSTOMIZE) build deploy | kubectl delete -f - --context=kind-hub
+	$(KUSTOMIZE) build deploy | kubectl delete -f - --context=kind-hub --ignore-not-found=true
 
 .PHONY: enable-addon
 enable-addon:  deploy
-	clusteradm addon enable --names busybox-addon --namespace open-cluster-management-agent-addon --clusters cluster1
+	clusteradm addon enable --names otel-addon --namespace open-cluster-management-agent-addon --clusters cluster1
 
 .PHONY: disable-addon
 disable-addon:
-	clusteradm addon disable --names busybox-addon --all-clusters true
+	clusteradm addon disable --names otel-addon --all-clusters true
 
 .PHONY: deploy-cert-manager
 deploy-cert-manager:
@@ -92,4 +97,4 @@ deploy-otel-operator: deploy-cert-manager
 	kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v$(OTEL_OPERATOR_VERSION)/opentelemetry-operator.yaml --context=kind-cluster1
 
 .PHONY: all
-all: start-clusters deploy-cert-manager deploy-otel-operator deploy enable-addon
+all: start-clusters deploy-otel-operator enable-addon

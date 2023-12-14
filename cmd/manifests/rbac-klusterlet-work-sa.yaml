@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: open-cluster-management:klusterlet-work:my-role
+  labels:
+    open-cluster-management.io/aggregate-to-work: "true"
+rules:
+  - apiGroups: ["opentelemetry.io"]
+    resources: ["opentelemetrycollectors"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
