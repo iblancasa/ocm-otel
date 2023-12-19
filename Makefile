@@ -64,37 +64,20 @@ container: addon
 
 .PHONY: deploy
 deploy: kustomize container
-	kubectx kind-hub
 	cd deploy && $(KUSTOMIZE) edit set image quay.io/open-cluster-management/addon-examples=$(EXAMPLE_IMAGE_NAME)
-	$(KUSTOMIZE) build deploy | kubectl apply -f - --context=kind-hub
+	$(KUSTOMIZE) build deploy | kubectl apply -f -
 
 .PHONY: undeploy
 undeploy: kustomize
-	$(KUSTOMIZE) build deploy | kubectl delete -f - --context=kind-hub --ignore-not-found=true
+	$(KUSTOMIZE) build deploy | kubectl delete -f - --ignore-not-found=true
 
 .PHONY: enable-addon
 enable-addon:  deploy
-	clusteradm addon enable --names otel-addon --namespace open-cluster-management-agent-addon --clusters cluster1
+	clusteradm addon enable --names otel-addon --namespace open-cluster-management-agent-addon --cluster cluster1
 
 .PHONY: disable-addon
 disable-addon:
-	clusteradm addon disable --names otel-addon --all-clusters true
-
-.PHONY: deploy-cert-manager
-deploy-cert-manager:
-	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v$(CERTMANAGER_VERSION)/cert-manager.yaml --context=kind-hub
-	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v$(CERTMANAGER_VERSION)/cert-manager.yaml --context=kind-cluster1
-	kubectl wait --timeout=5m --for=condition=available deployment cert-manager -n cert-manager --context=kind-hub
-	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-cainjector -n cert-manager --context=kind-hub
-	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-webhook -n cert-manager --context=kind-hub
-	kubectl wait --timeout=5m --for=condition=available deployment cert-manager -n cert-manager --context=kind-cluster1
-	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-cainjector -n cert-manager --context=kind-cluster1
-	kubectl wait --timeout=5m --for=condition=available deployment cert-manager-webhook -n cert-manager --context=kind-cluster1
-
-.PHONY: deploy-otel-operator
-deploy-otel-operator: deploy-cert-manager
-	kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v$(OTEL_OPERATOR_VERSION)/opentelemetry-operator.yaml --context=kind-hub
-	kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v$(OTEL_OPERATOR_VERSION)/opentelemetry-operator.yaml --context=kind-cluster1
+	clusteradm addon disable --names otel-addon --cluster cluster1
 
 .PHONY: all
 all: start-clusters deploy-otel-operator enable-addon

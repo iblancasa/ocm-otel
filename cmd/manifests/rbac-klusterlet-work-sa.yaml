@@ -8,4 +8,9 @@ rules:
   - apiGroups: ["opentelemetry.io"]
     resources: ["opentelemetrycollectors"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["operatorgroups", "subscriptions"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["project.openshift.io"]
+    resources: ["projects"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
