@@ -4,8 +4,8 @@ resources:
 - resources/cluster_role.yaml
 - resources/cluster_role_binding.yaml
 - resources/service_account.yaml
-- resources/busybox_clustermanagementaddon.yaml
-- resources/busybox_controller.yaml
+- resources/otel_clustermanagementaddon.yaml
+- resources/otel_addon_controller.yaml
 
 images:
 - name: quay.io/open-cluster-management/addon-examples

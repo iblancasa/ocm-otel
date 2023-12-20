@@ -78,7 +78,26 @@ func main() {
 	}
 
 	ctx := context.Background()
-	go addonMgr.Start(ctx)
+	
+	// Create a channel for errors
+	errChan := make(chan error, 1)
+
+	// Run addonMgr.Start in a goroutine
+	go func() {
+		err := addonMgr.Start(ctx)
+		if err != nil {
+			// Send the error to the channel
+			errChan <- err
+		}
+		// Close the channel when finished
+		close(errChan)
+	}()
+
+	// Check for an error
+	if err := <-errChan; err != nil {
+		// Handle the error
+		klog.Fatalf("addonMgr failed to start: %v", err)
+	}
 
 	<-ctx.Done()
 }

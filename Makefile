@@ -24,6 +24,9 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+GOLANGCI_LINT_VERSION ?= v1.54.0
+
 .PHONY: kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
@@ -81,3 +84,15 @@ disable-addon:
 
 .PHONY: all
 all: start-clusters deploy-otel-operator enable-addon
+
+.PHONY: fmt
+fmt:
+	go fmt ./...
+
+
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+.PHONY: lint
+lint: golangci-lint
+	cd cmd && $(GOLANGCI_LINT) run
