@@ -36,29 +36,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Necessary to reconcile OpenTelemetryCollectors
 	err = otelv1alpha1.AddToScheme(scheme.Scheme)
 	if err != nil {
-		klog.Errorf("unable to setup addon manager: %v", err)
+		klog.Errorf("error while adding the otel types to the schema: %v", err)
 		os.Exit(1)
 	}
 
-	// Necessary to reconcile OperatorGroups
+	// Necessary to reconcile Projects
 	err = projectsv1.AddToScheme(scheme.Scheme)
 	if err != nil {
-		klog.Errorf("unable to setup addon manager: %v", err)
+		klog.Errorf("error while adding the project types to the schema: %v", err)
 		os.Exit(1)
 	}
 
 	// Necessary to reconcile OperatorGroups
 	err = operatorsv1.AddToScheme(scheme.Scheme)
 	if err != nil {
-		klog.Errorf("unable to setup addon manager: %v", err)
+		klog.Errorf("error while adding the operatorgroup types to the schema: %v", err)
 		os.Exit(1)
 	}
 	// Necessary to reconcile Subscriptions
 	err = operatorsv1alpha1.AddToScheme(scheme.Scheme)
 	if err != nil {
-		klog.Errorf("unable to setup addon manager: %v", err)
+		klog.Errorf("error while adding the subscription types to the schema: %v", err)
 		os.Exit(1)
 	}
 
