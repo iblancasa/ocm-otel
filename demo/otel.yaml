@@ -1,26 +1,23 @@
 apiVersion: opentelemetry.io/v1alpha1
 kind: OpenTelemetryCollector
 metadata:
-  name: simplest
+  name: otlp-receiver
 spec:
   mode: "deployment"
-  # https://github.com/open-telemetry/opentelemetry-operator/issues/2449
-  # ingress:
-  #   type: ingress
-  #   annotations:
-  #     nginx.ingress.kubernetes.io/rewrite-target: /$2
+  ingress:
+    type: route
+    route:
+      termination: "edge"
   config: |
     receivers:
       otlp:
         protocols:
-          grpc:
           http:
     exporters:
-      debug:
-
+      logging:
     service:
       pipelines:
         traces:
           receivers: [otlp]
           processors: []
-          exporters: [debug]
+          exporters: [logging]
