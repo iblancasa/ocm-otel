@@ -15,10 +15,10 @@ ARCH ?= $(shell go env GOARCH)
 LDFLAGS ?= -s -w
 
 # Image URL to use all building/pushing image targets;
-EXAMPLE_IMAGE ?= addon-examples
-IMAGE_REGISTRY ?= quay.io/open-cluster-management
+IMG_NAME ?= otel-addon
+IMAGE_REGISTRY ?= ttl.sh
 IMAGE_TAG ?= latest
-EXAMPLE_IMAGE_NAME ?= $(IMAGE_REGISTRY)/$(EXAMPLE_IMAGE):$(IMAGE_TAG)
+IMG ?= $(IMAGE_REGISTRY)/$(IMG_NAME):$(IMAGE_TAG)
 
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
@@ -45,14 +45,20 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
-
-.PHONY: start-clusters
-start-clusters:
-	./hack/start-clusters.sh
-
 .PHONY: clusteradm
 clusteradm:
 	curl -L https://raw.githubusercontent.com/open-cluster-management-io/clusteradm/main/install.sh | bash
+
+.PHONY: fmt
+fmt:
+	go fmt ./...
+
+golangci-lint:
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+.PHONY: lint
+lint: golangci-lint
+	cd cmd && $(GOLANGCI_LINT) run
 
 addon: bin/addon
 
@@ -63,11 +69,11 @@ bin/addon:
 .PHONY: container
 container: GOOS = linux
 container: addon
-	docker buildx build -t ${EXAMPLE_IMAGE_NAME} . --platform  $(ARCH) --push
+	docker buildx build -t ${IMG} . --platform  $(ARCH) --push
 
 .PHONY: deploy
-deploy: kustomize container
-	cd deploy && $(KUSTOMIZE) edit set image quay.io/open-cluster-management/addon-examples=$(EXAMPLE_IMAGE_NAME)
+deploy: kustomize
+	cd deploy && $(KUSTOMIZE) edit set image quay.io/open-cluster-management/addon-examples=$(IMG)
 	$(KUSTOMIZE) build deploy | kubectl apply -f -
 
 .PHONY: undeploy
@@ -75,24 +81,29 @@ undeploy: kustomize
 	$(KUSTOMIZE) build deploy | kubectl delete -f - --ignore-not-found=true
 
 .PHONY: enable-addon
-enable-addon:  deploy
+enable-addon:
 	clusteradm addon enable --names otel-addon --namespace open-cluster-management-agent-addon --cluster cluster1
 
 .PHONY: disable-addon
 disable-addon:
 	clusteradm addon disable --names otel-addon --cluster cluster1
 
+.PHONY: install-addon
+install-addon: container deploy enable-addon
+
+.PHONY: deploy-otel-operator-hub
+deploy-otel-operator-hub:
+	kubectl apply -f ./cmd/manifests/operator-namespace.yaml
+	kubectl apply -f ./cmd/manifests/operator-group.yaml
+	kubectl apply -f ./cmd/manifests/operator-subscription.yaml
+	go run ./hack/check-operator-ready.go
+
+
+.PHONY: demo
+demo: deploy-otel-operator-hub
+	kubectl apply -f 
+
+
 .PHONY: all
-all: start-clusters deploy-otel-operator enable-addon
+all: install-addon demo
 
-.PHONY: fmt
-fmt:
-	go fmt ./...
-
-
-golangci-lint: ## Download golangci-lint locally if necessary.
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
-
-.PHONY: lint
-lint: golangci-lint
-	cd cmd && $(GOLANGCI_LINT) run
