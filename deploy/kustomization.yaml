@@ -9,6 +9,7 @@ resources:
 
 images:
 - name: quay.io/open-cluster-management/addon-examples
-  newName: ttl.sh/israeladdon
+  newName: ttl.sh/otel-addon
+  newTag: latest
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
