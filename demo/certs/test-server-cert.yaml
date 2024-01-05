@@ -5,29 +5,45 @@ metadata:
   namespace: observability
 spec:
   secretName: otel-gateway
-  isCA: false
+  commonName: otel-gateway
+  subject:
+    organizationalUnits:
+      - otel-ocm-addon
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 4096
+  dnsNames:
+    - otel-gateway.observability.svc
   usages:
     - server auth
-    - client auth
-  dnsNames:
-  - "otel-gateway.observability.svc.cluster.local"
-  - "otel-gateway"
+    - key encipherment
+    - digital signature
   issuerRef:
     name: otel-ca-issuer
+    kind: ClusterIssuer
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: test-client
+  name: cluster1
   namespace: observability
 spec:
-  secretName: test-client-tls
-  isCA: false
-  usages:
-    - server auth
-    - client auth
+  secretName: cluster1
+  commonName: cluster1
+  subject:
+    organizationalUnits:
+      - otel-ocm-addon
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 4096
   dnsNames:
-  - "test-client.test.svc.cluster.local"
-  - "test-client"
+    - otel-gateway.observability.svc
+  usages:
+    - client auth
+    - key encipherment
+    - digital signature
   issuerRef:
     name: otel-ca-issuer
+    kind: ClusterIssuer

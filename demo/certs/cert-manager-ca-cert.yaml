@@ -2,19 +2,15 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: otel-ca
-  namespace: observability
+  namespace: cert-manager
 spec:
   isCA: true
   commonName: otel-ca
-  subject:
-    organizations:
-      - Demo.
-    organizationalUnits:
-      - AddOns
   secretName: otel-ca-secret
   privateKey:
-    algorithm: ECDSA
-    size: 256
+    algorithm: RSA
+    size: 4096
+    encoding: PKCS8
   issuerRef:
     name: selfsigned-issuer
     kind: Issuer

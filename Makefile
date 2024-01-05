@@ -105,10 +105,14 @@ demo: deploy-otel-operator-hub certs
 .PHONY: certs
 certs:
 	kubectl create namespace observability
-	kubectl create -f ./demo/certs/cert-manager-ss-issuer.yaml
-	kubectl create -f ./demo/certs/cert-manager-ca-cert.yaml
-	kubectl create -f ./demo/certs/cert-manager-ca-issuer.yaml
-	kubectl create -f ./demo/certs/test-server-cert.yaml
+	kubectl apply -f ./demo/certs/cert-manager-ss-issuer.yaml
+	sleep 5
+	kubectl apply -f ./demo/certs/cert-manager-ca-cert.yaml
+	sleep 5
+	kubectl apply -f ./demo/certs/cert-manager-ca-issuer.yaml
+	sleep 5
+	kubectl apply -f ./demo/certs/test-server-cert.yaml
+
 
 
 .PHONY: all
