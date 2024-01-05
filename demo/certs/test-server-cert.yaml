@@ -1,0 +1,33 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: otel-gateway
+  namespace: observability
+spec:
+  secretName: otel-gateway
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - "otel-gateway.observability.svc.cluster.local"
+  - "otel-gateway"
+  issuerRef:
+    name: otel-ca-issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-client
+  namespace: observability
+spec:
+  secretName: test-client-tls
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - "test-client.test.svc.cluster.local"
+  - "test-client"
+  issuerRef:
+    name: otel-ca-issuer

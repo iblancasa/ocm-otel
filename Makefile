@@ -98,10 +98,17 @@ deploy-otel-operator-hub:
 	kubectl apply -f ./cmd/manifests/operator-subscription.yaml
 	go run ./hack/check-operator-ready.go
 
-
 .PHONY: demo
-demo: deploy-otel-operator-hub
-	kubectl apply -f 
+demo: deploy-otel-operator-hub certs
+	kubectl create -f ./demo/otel.yaml
+
+.PHONY: certs
+certs:
+	kubectl create namespace observability
+	kubectl create -f ./demo/certs/cert-manager-ss-issuer.yaml
+	kubectl create -f ./demo/certs/cert-manager-ca-cert.yaml
+	kubectl create -f ./demo/certs/cert-manager-ca-issuer.yaml
+	kubectl create -f ./demo/certs/test-server-cert.yaml
 
 
 .PHONY: all
