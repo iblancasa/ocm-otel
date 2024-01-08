@@ -14,7 +14,7 @@ spec:
     encoding: PKCS8
     size: 4096
   dnsNames:
-    - otel-gateway.observability.svc
+    - otlp-http-otel-gateway-route-observability.apps.iba413ipi01.maistra.upshift.redhat.com
   usages:
     - server auth
     - key encipherment
@@ -38,8 +38,6 @@ spec:
     algorithm: RSA
     encoding: PKCS8
     size: 4096
-  dnsNames:
-    - otel-gateway.observability.svc
   usages:
     - client auth
     - key encipherment

@@ -13,8 +13,8 @@ spec:
     processors:
 
     exporters:
-      otlp:
-        endpoint: otlp-grpc-otel-gateway-route-observability.apps.iba413ipi01.maistra.upshift.redhat.com
+      otlphttp:
+        endpoint: "https://otlp-http-otel-gateway-route-observability.apps.iba413ipi01.maistra.upshift.redhat.com"
         tls:
           insecure: false
           cert_file: /certs/tls.crt
@@ -26,7 +26,7 @@ spec:
         traces:
           receivers: [otlp]
           processors: []
-          exporters: [otlp]
+          exporters: [otlphttp]
   volumes:
     - name: certs
       secret: 
