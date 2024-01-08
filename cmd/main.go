@@ -3,8 +3,12 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/base64"
+	"fmt"
 	"os"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	restclient "k8s.io/client-go/rest"
@@ -16,14 +20,92 @@ import (
 	projectsv1 "github.com/openshift/api/project/v1"
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	addonapiv1alpha1 "open-cluster-management.io/api/addon/v1alpha1"
+	clusterv1 "open-cluster-management.io/api/cluster/v1"
 )
 
 //go:embed manifests
 var FS embed.FS
 
+type userValues struct {
+	MTLS mTLS `json:"mTLS"`
+}
+
+type mTLS struct {
+	Key      string `json:"key"`
+	Cert     string `json:"cert"`
+	CABundle string `json:"ca"`
+}
+
 const (
 	addonName = "otel-addon"
+	defaultInstallationNamespace = "open-cluster-management-agent-addon"
 )
+
+func GetDefaultValues(cluster *clusterv1.ManagedCluster,
+	addon *addonapiv1alpha1.ManagedClusterAddOn) (addonfactory.Values, error) {
+	installNamespace := addon.Spec.InstallNamespace
+	if len(installNamespace) == 0 {
+		installNamespace = defaultInstallationNamespace
+	}
+
+	manifestConfig := struct {
+		ClusterName             string
+		AddonInstallNamespace   string 
+	}{
+		AddonInstallNamespace: installNamespace,
+		ClusterName:           cluster.Name,
+	}
+
+	return addonfactory.StructToValues(manifestConfig), nil
+}
+
+
+func GetMTLSSecretValues(kubeClient kubernetes.Interface) addonfactory.GetValuesFunc {
+	return func(
+		cluster *clusterv1.ManagedCluster,
+		addon *addonapiv1alpha1.ManagedClusterAddOn,
+	) (addonfactory.Values, error) {
+		overrideValues := addonfactory.Values{}
+		secret, err := kubeClient.CoreV1().Secrets(cluster.Name).Get(context.Background(), cluster.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		key, ok := secret.Data["tls.key"]
+		if !ok {
+			return nil, fmt.Errorf("no tls.key in secret %s/%s", cluster.Name, cluster.Name)
+		}
+
+		cert, ok := secret.Data["tls.crt"]
+		if !ok {
+			return nil, fmt.Errorf("no tls.crt in secret %s/%s", cluster.Name, cluster.Name)
+		}
+
+		ca, ok := secret.Data["ca.crt"]
+		if !ok {
+			return nil, fmt.Errorf("no tls.crt in secret %s/%s", cluster.Name, cluster.Name)
+		}
+
+		userJsonValues := userValues{
+			MTLS: mTLS{
+				Key:  base64.StdEncoding.EncodeToString(key),
+				Cert: base64.StdEncoding.EncodeToString(cert),
+				CABundle: base64.StdEncoding.EncodeToString(ca),
+			},
+		}
+		values, err := addonfactory.JsonStructToValues(userJsonValues)
+		if err != nil {
+			return nil, err
+		}
+		overrideValues = addonfactory.MergeValues(overrideValues, values)
+
+		return overrideValues, nil
+	}
+}
+
+
+	
 
 func main() {
 	kubeConfig, err := restclient.InClusterConfig()
@@ -33,6 +115,12 @@ func main() {
 	addonMgr, err := addonmanager.New(kubeConfig)
 	if err != nil {
 		klog.Errorf("unable to setup addon manager: %v", err)
+		os.Exit(1)
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		klog.Errorf("unable to create the kubernetes client: %v", err)
 		os.Exit(1)
 	}
 
@@ -65,6 +153,10 @@ func main() {
 
 	agentAddon, err := addonfactory.NewAgentAddonFactory(addonName, FS, "manifests").
 		WithScheme(scheme.Scheme).
+		WithGetValuesFuncs(
+			GetDefaultValues,
+			GetMTLSSecretValues(kubeClient),
+		).
 		BuildTemplateAgentAddon()
 	if err != nil {
 		klog.Errorf("failed to build agent addon %v", err)

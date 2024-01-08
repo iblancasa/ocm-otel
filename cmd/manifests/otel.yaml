@@ -2,13 +2,10 @@ apiVersion: opentelemetry.io/v1alpha1
 kind: OpenTelemetryCollector
 metadata:
   name: simplest
-  namespace: open-cluster-management-agent-addon
+  namespace: {{ .AddonInstallNamespace }}
 spec:
   config: |
     receivers:
-      jaeger:
-        protocols:
-          grpc:
       otlp:
         protocols:
           grpc:
@@ -16,11 +13,24 @@ spec:
     processors:
 
     exporters:
-      debug:
+      otlp:
+        endpoint: otlp-grpc-otel-gateway-route-observability.apps.iba413ipi01.maistra.upshift.redhat.com
+        tls:
+          insecure: false
+          cert_file: /certs/tls.crt
+          key_file: /certs/tls.key
+          ca_file: /certs/ca.crt
 
     service:
       pipelines:
         traces:
-          receivers: [jaeger,otlp]
+          receivers: [otlp]
           processors: []
-          exporters: [debug]
+          exporters: [otlp]
+  volumes:
+    - name: certs
+      secret: 
+        secretName: mtls-spoke-hub-otel
+  volumeMounts:
+    - name: certs
+      mountPath: /certs
