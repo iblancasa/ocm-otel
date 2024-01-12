@@ -99,7 +99,7 @@ deploy-otel-operator-hub:
 	go run ./hack/check-operator-ready.go
 
 .PHONY: demo
-demo: deploy-otel-operator-hub certs
+demo: deploy-otel-operator-hub certs install-addon
 	kubectl create -f ./demo/otel.yaml
 
 .PHONY: certs
